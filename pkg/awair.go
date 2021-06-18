@@ -7,6 +7,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "k8s.io/api/apps/v1"
@@ -69,34 +70,46 @@ func (y *AwairPoller) InstallKubernetes() error {
 	deployment := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "awair-poller",
+			Labels: map[string]string{
+				"app":     "static-site",
+				"version": "v1",
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(2),
+			Replicas: int32Ptr(3),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"beeps": "boops",
+					"app": "static-site",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"beeps": "boops",
+						"app":     "static-site",
+						"version": "v1",
 					},
 				},
 				Spec: apiv1.PodSpec{
 					Containers: []apiv1.Container{
 						{
-							Name: "awair-poller",
-
-							// ------------------------\
-							Image: y.ContainerImage, // <-- THIS IS HOW YOU INTERPOLATE AT RUNTIME
-							// ------------------------/
-
+							Name:            "awair-poller",
+							Image:           y.ContainerImage,
+							ImagePullPolicy: "Always",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
 									Protocol:      apiv1.ProtocolTCP,
 									ContainerPort: y.ContainerPort,
+								},
+							},
+							Resources: apiv1.ResourceRequirements{
+								Requests: apiv1.ResourceList{
+									"cpu":    resource.MustParse("64Mi"),
+									"memory": resource.MustParse("25m"),
+								},
+								Limits: apiv1.ResourceList{
+									"cpu":    resource.MustParse("128Mi"),
+									"memory": resource.MustParse("50m"),
 								},
 							},
 						},
