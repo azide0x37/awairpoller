@@ -152,6 +152,7 @@ func (y *AwairPoller) InstallKubernetes() error {
 	return nil
 }
 
+// KubernetesClient will try to configure client for Kubernetes
 func (y *AwairPoller) KubernetesClient(kubeconfigPath string) error {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
@@ -165,6 +166,7 @@ func (y *AwairPoller) KubernetesClient(kubeconfigPath string) error {
 	return nil
 }
 
+// Archive will try to back up this config
 func (y *AwairPoller) Archive() error {
 	// See you can even build out scaffolding for other features
 	// you hope to build later. Maybe we will get to this next sprint.
