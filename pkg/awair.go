@@ -172,6 +172,9 @@ func (y *AwairPoller) Archive() error {
 	// Because you are now a software engineer you do things like this.
 	//
 	// TODO @kris-nova save to mongo
+	if y.deployment == nil {
+		return fmt.Errorf("unable validate AwairPoller deployment: missing deployment")
+	}
 	return nil
 }
 

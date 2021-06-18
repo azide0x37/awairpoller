@@ -49,11 +49,47 @@ func TestAwairPoller_Validate_Zero_Containers(t *testing.T) {
 	}
 }
 
-func TestAwairPoller_InstallKubernetes(t *testing.T) {
+func TestAwairPoller_InstallKubernetesNilClient(t *testing.T) {
 	y := New()
 	y.client = nil
 	err := y.InstallKubernetes()
 	if err == nil {
 		t.Errorf("Expecting error for nil client")
+	}
+}
+
+func TestAwairPoller_InstallKubernetesNilDeployment(t *testing.T) {
+	y := New()
+	y.client = nil
+	err := y.InstallKubernetes()
+	if err == nil {
+		t.Errorf("Expecting error for nil deployment")
+	}
+}
+
+func TestAwairPoller_UninstallKubernetesNilClient(t *testing.T) {
+	y := New()
+	y.client = nil
+	err := y.UninstallKubernetes()
+	if err == nil {
+		t.Errorf("Expecting error for nil client")
+	}
+}
+
+func TestAwairPoller_ArchiveNilClient(t *testing.T) {
+	y := New()
+	y.client = nil
+	err := y.Archive()
+	if err == nil {
+		t.Errorf("Expecting error for nil client")
+	}
+}
+
+func TestAwairPoller_ArchiveNilDeployment(t *testing.T) {
+	y := New()
+	y.deployment = nil
+	err := y.Archive()
+	if err == nil {
+		t.Errorf("Expecting error for nil deployment")
 	}
 }
