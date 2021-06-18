@@ -101,7 +101,8 @@ func TestNew(t *testing.T) {
 		name string
 		want *AwairPoller
 	}{
-		// TODO: Add test cases.
+		{want: &AwairPoller{}},
+		{want: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -128,7 +129,14 @@ func TestAwairPoller_KubernetesClient(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			args:    args{kubeconfigPath: "./kubeconfig"},
+			wantErr: true,
+		},
+		{
+			args:    args{kubeconfigPath: ""},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

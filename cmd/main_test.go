@@ -6,15 +6,9 @@ func Test_main(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
-		{
-			name: "test",
-		},
-		{
-			name: "343",
-		},
-		{
-			name: "343343343343343343343343343343343343343343343",
-		},
+		//TODO: Add test cases
+		//TODO: ...find out how that works for mains, lol
+		//TODO: Using flags?
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
