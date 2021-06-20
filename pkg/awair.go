@@ -3,7 +3,6 @@ package awairpoller
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	v1alpha3 "istio.io/api/networking/v1alpha3"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -12,6 +11,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
@@ -44,7 +44,7 @@ func (y *AwairPoller) InstallKubernetes() error {
 
 	deployment := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "awair-poller",
+			Name: "awairpoller",
 			Labels: map[string]string{
 				"app":     "static-site",
 				"version": "v1",
@@ -67,7 +67,7 @@ func (y *AwairPoller) InstallKubernetes() error {
 				Spec: apiv1.PodSpec{
 					Containers: []apiv1.Container{
 						{
-							Name:            "awair-poller",
+							Name:            "awairpoller",
 							Image:           y.ContainerImage,
 							ImagePullPolicy: "Always",
 							Ports: []apiv1.ContainerPort{
@@ -105,8 +105,24 @@ func (y *AwairPoller) InstallKubernetes() error {
 				"service.beta.kubernetes.io/linode-loadbalancer-throttle": "4",
 			},
 		},
-		Spec:   apiv1.ServiceSpec{},
-		Status: apiv1.ServiceStatus{},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:     "http",
+					Protocol: "TCP",
+					Port:     80,
+					TargetPort: intstr.IntOrString{
+						Type:   0,
+						IntVal: 0,
+						StrVal: "80",
+					},
+				},
+			},
+			Selector: map[string]string{
+				"app": "static-site",
+			},
+			SessionAffinity: "None",
+		},
 	}
 
 	gateway := &networkingv1alpha3.Gateway{
@@ -284,9 +300,6 @@ func (y *AwairPoller) Validate() error {
 	// Anyway I just dreamt up something we want to check for. Check that the name contains
 	// the string "yam". Why? I don't know. Just seemed like a good example.
 	//
-	if !strings.Contains(y.deployment.Name, "yam") {
-		return fmt.Errorf("unable validate AwairPoller deployment. invalid name %s", y.deployment.Name)
-	}
 	return nil
 }
 
@@ -300,7 +313,7 @@ func (y *AwairPoller) UninstallKubernetes() error {
 	// Here we "hard code" both the name of the namespace, and the name of the deployment to delete.
 	// But you know what? A TODO is still 100% better than YAML files interpolated at runtime.
 	// TODO @kris-nova introduce dynamic namespaces and names
-	return y.client.AppsV1().Deployments("default").Delete(context.TODO(), "awair-poller", metav1.DeleteOptions{})
+	return y.client.AppsV1().Deployments("default").Delete(context.TODO(), "awairpoller", metav1.DeleteOptions{})
 
 }
 
