@@ -79,12 +79,12 @@ func (y *AwairPoller) InstallKubernetes() error {
 							},
 							Resources: apiv1.ResourceRequirements{
 								Requests: apiv1.ResourceList{
-									"cpu":    resource.MustParse("64Mi"),
-									"memory": resource.MustParse("25m"),
+									"memory": resource.MustParse("64Mi"),
+									"cpu":    resource.MustParse("25m"),
 								},
 								Limits: apiv1.ResourceList{
-									"cpu":    resource.MustParse("128Mi"),
-									"memory": resource.MustParse("50m"),
+									"memory": resource.MustParse("128Mi"),
+									"cpu":    resource.MustParse("50m"),
 								},
 							},
 						},
