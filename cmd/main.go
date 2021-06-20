@@ -12,7 +12,7 @@ import (
 
 func main() {
 	logger.BitwiseLevel = logger.LogEverything
-	logger.Always("AwairPoller v%s")
+	logger.Always("AwairPoller")
 	logger.Always("Precheck: Uninstalling previous AwairPoller if it exists.")
 
 	y := awair.New()
