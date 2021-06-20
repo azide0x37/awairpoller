@@ -97,7 +97,7 @@ func (y *AwairPoller) InstallKubernetes() error {
 	service := &apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "static-site-service",
+			Name: "awairpoller-service",
 			Labels: map[string]string{
 				"app": "static-site",
 			},
@@ -154,7 +154,7 @@ func (y *AwairPoller) InstallKubernetes() error {
 					Route: []*v1alpha3.HTTPRouteDestination{
 						{
 							Destination: &v1alpha3.Destination{
-								Host: "static-site-service",
+								Host: "awairpoller-service",
 								//Subset:"",
 							},
 							Weight: 100,
