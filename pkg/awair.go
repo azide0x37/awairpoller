@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
+	v1alpha3 "istio.io/api/networking/v1alpha3"
+	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+
+	versionedclient "istio.io/client-go/pkg/clientset/versioned"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "k8s.io/api/apps/v1"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -21,7 +23,11 @@ type AwairPoller struct {
 	ContainerPort  int32
 	ContainerImage string
 	client         *kubernetes.Clientset
+	istioclient    *versionedclient.Clientset
 	deployment     *v1.Deployment
+	service        *apiv1.Service
+	virtualservice *networkingv1alpha3.VirtualService
+	gateway        *networkingv1alpha3.Gateway
 }
 
 // New returns an empty *AwairPoller{}
@@ -32,41 +38,10 @@ func New() *AwairPoller {
 // InstallKubernetes will try to install AwairPoller in Kubernetes
 func (y *AwairPoller) InstallKubernetes() error {
 	// Notice how we can do amazing things like add custom error messages
-	// when things go wrong? This prevents us from digging through stack
-	// traces later.
-	//
-	// The sky is the limit. We can make this method do anything we want
-	// and return errors whenever something we don't like goes wrong.
 	if y.client == nil {
 		return fmt.Errorf("missing kube client: use KubernetesClient()")
 	}
-	// -----------------------------------------------------------------------------
-	//
-	// [beeps.yaml]
-	//
-	// If you can read YAML you can read this.
-	// If you can edit YAML you can edit this.
-	// If you can understand what {{ .Values.image }} does you can work on this.
-	// If you can commit YAML changes you can commit Go changes.
-	//
-	// Oh did I mention that by doing it this way you never:
-	//    - Have to guess if your indentation is wrong
-	//    - Have to worry about typos (it wont compile)
-	//    - Have to hunt around for errors (the go compiler tells you the line number)
-	//    - Have to "render" a template to see what the fuck is going on
-	//    - Have to wonder what happened at what time because you "changed" the template
-	//
-	// Furthermore if you use any of the readily available Go IDEs you get:
-	//    - Tab hinting
-	//    - Color coding
-	//    - Syntax highlighting
-	//    - Auto formatting
-	//    - Auto linting
-	//    - Documentation
-	//    - Syntax checking
-	//
-	// Please stop writing YAML and just do this.
-	//
+
 	deployment := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "awair-poller",
@@ -75,7 +50,7 @@ func (y *AwairPoller) InstallKubernetes() error {
 				"version": "v1",
 			},
 		},
-		Spec: appsv1.DeploymentSpec{
+		Spec: v1.DeploymentSpec{
 			Replicas: int32Ptr(3),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -118,17 +93,62 @@ func (y *AwairPoller) InstallKubernetes() error {
 			},
 		},
 	}
-	// -----------------------------------------------------------------------------
 
-	// Go to town.
-	// Have fun.
-	// Over engineer all kinds of crazy little systems and functions, methods, and types.
-	// Build entire packages -- or -- Keep it simple.
-	// Whatever you want to do.
-	// We now have a turing complete programming language and the world is your oyster.
-	//
-	// See we can now do cool shit like validate our deployment actually looks the way we want
-	//
+	service := &apiv1.Service{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "static-site-service",
+			Labels: map[string]string{
+				"app": "static-site",
+			},
+			Annotations: map[string]string{
+				"service.beta.kubernetes.io/linode-loadbalancer-throttle": "4",
+			},
+		},
+		Spec:   apiv1.ServiceSpec{},
+		Status: apiv1.ServiceStatus{},
+	}
+
+	gateway := &networkingv1alpha3.Gateway{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: v1alpha3.Gateway{
+			Servers: []*v1alpha3.Server{
+				{
+					Port:  &v1alpha3.Port{Number: 80},
+					Hosts: []string{"*"},
+					Name:  "HTTP",
+				},
+			},
+			Selector: map[string]string{
+				"istio": "ingressgateway",
+			},
+		},
+	}
+
+	virtualservice := &networkingv1alpha3.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "static-site",
+		},
+		Spec: v1alpha3.VirtualService{
+			Hosts:    []string{"*"},
+			Gateways: []string{"static-site-gateway"},
+			Http: []*v1alpha3.HTTPRoute{
+				{
+					Route: []*v1alpha3.HTTPRouteDestination{
+						{
+							Destination: &v1alpha3.Destination{
+								Host: "static-site-service",
+								//Subset:"",
+							},
+							Weight: 100,
+						},
+					},
+				},
+			},
+		},
+	}
+
 	y.deployment = deployment
 	err := y.Validate()
 	if err != nil {
@@ -156,12 +176,41 @@ func (y *AwairPoller) InstallKubernetes() error {
 	// The client is authenticated.
 	// The validation checks are passed.
 	// We can finally install in Kubernetes.
-	result, err := y.client.AppsV1().Deployments("default").Create(context.TODO(), deployment, metav1.CreateOptions{})
+
+	//NOTE: Execute our Deployment
+	deployResult, err := y.client.AppsV1().Deployments("default").Create(context.TODO(), deployment, metav1.CreateOptions{})
+
 	if err != nil {
 		return fmt.Errorf("oh no! something went wrong deploying to kubernetes: %v", err)
 	}
+
+	//NOTE: Execute our Service
+	serviceResult, err := y.client.CoreV1().Services("default").Create(context.TODO(), service, metav1.CreateOptions{})
+
+	if err != nil {
+		return fmt.Errorf("oh no! something went wrong deploying DestinationRule to kubernetes: %v", err)
+	}
+
+	//NOTE: Execute our VirtualService
+	virtualServiceResult, err := y.istioclient.NetworkingV1alpha3().VirtualServices("default").Create(context.TODO(), virtualservice, metav1.CreateOptions{})
+
+	if err != nil {
+		return fmt.Errorf("oh no! something went wrong deploying Gateway to kubernetes: %v", err)
+	}
+
+	//NOTE: Execute our Gateway
+	gatewayResult, err := y.istioclient.NetworkingV1alpha3().Gateways("default").Create(context.TODO(), gateway, metav1.CreateOptions{})
+
+	if err != nil {
+		return fmt.Errorf("oh no! something went wrong deploying VirtualService to kubernetes: %v", err)
+	}
+
 	// Update the deployment in memory with the object from Kubernetes
-	y.deployment = result
+	y.deployment = deployResult
+	y.service = serviceResult
+	y.virtualservice = virtualServiceResult
+	y.gateway = gatewayResult
+
 	return nil
 }
 
@@ -176,6 +225,21 @@ func (y *AwairPoller) KubernetesClient(kubeconfigPath string) error {
 		return fmt.Errorf("unable to authenticate with Kubernetes with kube config %s: %v", kubeconfigPath, err)
 	}
 	y.client = client
+	return nil
+}
+
+// KubernetesClient will try to configure client for Kubernetes
+func (y *AwairPoller) IstioClient(kubeconfigPath string) error {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("unable to authenticate with Kubernetes with kube config %s: %v", kubeconfigPath, err)
+	}
+	ic, err := versionedclient.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("Failed to create istio client: %s", err)
+	}
+
+	y.istioclient = ic
 	return nil
 }
 

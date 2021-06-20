@@ -9,6 +9,8 @@ require (
 	github.com/quasilyte/regex/syntax v0.0.0-20200805063351-8f842688393c // indirect
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
 	golang.org/x/tools v0.1.3 // indirect
+	istio.io/api v0.0.0-20210617183632-a1ac914aead5 // indirect
+	istio.io/client-go v0.0.0-20210617185106-23e5e33954eb // indirect
 	k8s.io/api v0.21.2
 	k8s.io/apimachinery v0.21.2
 	k8s.io/client-go v0.21.2
